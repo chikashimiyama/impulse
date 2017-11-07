@@ -1,2 +1,3 @@
-# impulse-
-impulse generator
+# impulse
+flext-based
+impulse generator for Pd
