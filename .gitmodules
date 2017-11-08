@@ -1,0 +1,3 @@
+[submodule "flext"]
+	path = flext
+	url = https://github.com/grrrr/flext.git
