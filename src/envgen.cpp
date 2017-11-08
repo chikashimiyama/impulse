@@ -53,9 +53,12 @@ struct Envelope{
         mSustainTime += random(mSustainTimeRandom);
         mReleaseTime += random(mReleaseTimeRandom);
         mReleaseCurve += random(mReleaseCurveRandom);
-
+        mEnvelopeDuration = mAttackTime + mSustainTime + mReleaseTime;
     }
 
+    float getPhase(){
+        return (float)mElapsedSample / (float)mEnvelopeDuration;
+    }
     // 3 input
     float mSustainLevel;
     unsigned long mElapsedSample;
@@ -72,6 +75,8 @@ struct Envelope{
     unsigned long mReleaseTimeRandom;
     float mReleaseCurve;
     float mReleaseCurveRandom;
+
+    unsigned long mEnvelopeDuration;
 
 private:
     unsigned long random(unsigned long max){
@@ -140,6 +145,7 @@ envgen::envgen(){
 
 	AddInAnything("impulse in"); 
     AddOutSignal("envgen");
+    AddOutSignal("phase");
 
     FLEXT_ADDMETHOD_(0, "info", m_info);
     FLEXT_ADDMETHOD_F(0,"attack_time",m_attack_time);
@@ -153,7 +159,7 @@ envgen::envgen(){
     FLEXT_ADDMETHOD_F(0,"release_time",m_release_time); 
     FLEXT_ADDMETHOD_F(0,"release_time_rand",m_release_time_rand); 
     FLEXT_ADDMETHOD_F(0,"release_curve",m_release_curve);
-    FLEXT_ADDMETHOD_F(0,"attack_curve_rand",m_release_curve_rand); 
+    FLEXT_ADDMETHOD_F(0,"release_curve_rand",m_release_curve_rand); 
 } 
 
 void envgen::m_info(){
@@ -186,11 +192,11 @@ void envgen::m_signal(int n, float *const *in, float *const *out){
 
     float *ins = in[0];
     float *outs = out[0];
-
+    float *pouts = out[1];
     while (n--){
         float input = *ins++;
         float sample = 0.0f;
-
+        float phase = 1.0f;
         if(mFixedEnvelope.mMode != Mode::Idle){
             // busy
             switch(mFixedEnvelope.mMode){
@@ -223,9 +229,8 @@ void envgen::m_signal(int n, float *const *in, float *const *out){
                     break;
                 }
             }
-
+            phase = mFixedEnvelope.getPhase();
             mFixedEnvelope.mElapsedSample++;
-    
         }else{
             // non busy
             sample = 0.0f;
@@ -233,8 +238,10 @@ void envgen::m_signal(int n, float *const *in, float *const *out){
                 mFixedEnvelope = mInputEnvelope;
                 mFixedEnvelope.trigger(input);
             }
+            phase = 1.0;
         }
         *outs++ = sample;
+        *pouts++ = phase;
     }
 } 
 
