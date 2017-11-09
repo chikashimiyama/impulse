@@ -1,0 +1,3 @@
+NAME=envgen~
+SRCS=envgen.cpp
+

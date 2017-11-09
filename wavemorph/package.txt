@@ -1,0 +1,3 @@
+NAME=wavemorph~
+SRCS=wavemorph.cpp
+
