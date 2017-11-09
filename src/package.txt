@@ -1,2 +1,2 @@
-NAME=impulse~ envgen~ glisson~
-SRCS=impulse.cpp envgen.cpp glisson.cpp
+NAME=envgen~
+SRCS=envgen.cpp

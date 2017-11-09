@@ -47,7 +47,7 @@ struct Envelope{
         mSustainLevel = level;
         mMode = Mode::Attack;
         mElapsedSample = 0;
-        
+        mGlobalElapsedSample = 0;
         mAttackTime += random(mAttackTimeRandom);
         mAttackCurve += random(mAttackCurveRandom);
         mSustainTime += random(mSustainTimeRandom);
@@ -56,12 +56,13 @@ struct Envelope{
         mEnvelopeDuration = mAttackTime + mSustainTime + mReleaseTime;
     }
 
-    float getPhase(){
-        return (float)mElapsedSample / (float)mEnvelopeDuration;
+    float getGlobalPhase(){
+        return (float)mGlobalElapsedSample / (float)mEnvelopeDuration;
     }
     // 3 input
     float mSustainLevel;
     unsigned long mElapsedSample;
+    unsigned long mGlobalElapsedSample;
     Mode mMode;
 
     // 10 parameters
@@ -196,13 +197,13 @@ void envgen::m_signal(int n, float *const *in, float *const *out){
     while (n--){
         float input = *ins++;
         float sample = 0.0f;
-        float phase = 1.0f;
+        float globalPhase = 1.0f;
         if(mFixedEnvelope.mMode != Mode::Idle){
             // busy
             switch(mFixedEnvelope.mMode){
                 case Mode::Attack:{
-                    float phase = (float)mFixedEnvelope.mElapsedSample / (float)mFixedEnvelope.mAttackTime;
-                    sample = pow(phase, mFixedEnvelope.mAttackCurve) * mFixedEnvelope.mSustainLevel;
+                    float localPhase = (float)mFixedEnvelope.mElapsedSample / (float)mFixedEnvelope.mAttackTime;
+                    sample = pow(localPhase, mFixedEnvelope.mAttackCurve) * mFixedEnvelope.mSustainLevel;
                     if(mFixedEnvelope.mElapsedSample >= mFixedEnvelope.mAttackTime){
                         sample = mFixedEnvelope.mSustainLevel;
                         mFixedEnvelope.mMode = Mode::Sustain;
@@ -220,8 +221,8 @@ void envgen::m_signal(int n, float *const *in, float *const *out){
                     break;
                 }
                 case Mode::Release:{
-                    float phase = 1.0f - (float)mFixedEnvelope.mElapsedSample / (float)mFixedEnvelope.mReleaseTime;
-                    sample = pow(phase, mFixedEnvelope.mReleaseCurve) * mFixedEnvelope.mSustainLevel;
+                    float localPhase = 1.0f - (float)mFixedEnvelope.mElapsedSample / (float)mFixedEnvelope.mReleaseTime;
+                    sample = pow(localPhase, mFixedEnvelope.mReleaseCurve) * mFixedEnvelope.mSustainLevel;
 
                     if(mFixedEnvelope.mElapsedSample >= mFixedEnvelope.mReleaseTime){
                         mFixedEnvelope.mMode = Mode::Idle;
@@ -229,19 +230,21 @@ void envgen::m_signal(int n, float *const *in, float *const *out){
                     break;
                 }
             }
-            phase = mFixedEnvelope.getPhase();
+            globalPhase = mFixedEnvelope.getGlobalPhase();
             mFixedEnvelope.mElapsedSample++;
+            mFixedEnvelope.mGlobalElapsedSample++;
         }else{
             // non busy
             sample = 0.0f;
+
             if(input > 0.0001f){
                 mFixedEnvelope = mInputEnvelope;
                 mFixedEnvelope.trigger(input);
             }
-            phase = 1.0;
+            globalPhase = 1.0;
         }
         *outs++ = sample;
-        *pouts++ = phase;
+        *pouts++ = globalPhase;
     }
 } 
 
