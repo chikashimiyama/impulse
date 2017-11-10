@@ -86,7 +86,7 @@ private:
     }
 
     float random(float max){
-        std::uniform_real_distribution<float> unif(0, max);
+        std::uniform_real_distribution<float> unif(-max, max);
         return unif(re);
     }
 
@@ -122,7 +122,8 @@ private:
     unsigned long mstosamps(float ms);
     unsigned long random(unsigned long max);
     float random(float max);
-
+    double fastPow(double a, double b);
+    
     FLEXT_CALLBACK(m_info);
     FLEXT_CALLBACK_F(m_attack_time);
     FLEXT_CALLBACK_F(m_attack_time_rand);
@@ -203,7 +204,7 @@ void envgen::m_signal(int n, float *const *in, float *const *out){
             switch(mFixedEnvelope.mMode){
                 case Mode::Attack:{
                     float localPhase = (float)mFixedEnvelope.mElapsedSample / (float)mFixedEnvelope.mAttackTime;
-                    sample = pow(localPhase, mFixedEnvelope.mAttackCurve) * mFixedEnvelope.mSustainLevel;
+                    sample = fastPow(localPhase, mFixedEnvelope.mAttackCurve) * mFixedEnvelope.mSustainLevel;
                     if(mFixedEnvelope.mElapsedSample >= mFixedEnvelope.mAttackTime){
                         sample = mFixedEnvelope.mSustainLevel;
                         mFixedEnvelope.mMode = Mode::Sustain;
@@ -222,7 +223,7 @@ void envgen::m_signal(int n, float *const *in, float *const *out){
                 }
                 case Mode::Release:{
                     float localPhase = 1.0f - (float)mFixedEnvelope.mElapsedSample / (float)mFixedEnvelope.mReleaseTime;
-                    sample = pow(localPhase, mFixedEnvelope.mReleaseCurve) * mFixedEnvelope.mSustainLevel;
+                    sample = fastPow(localPhase, mFixedEnvelope.mReleaseCurve) * mFixedEnvelope.mSustainLevel;
 
                     if(mFixedEnvelope.mElapsedSample >= mFixedEnvelope.mReleaseTime){
                         mFixedEnvelope.mMode = Mode::Idle;
@@ -252,3 +253,12 @@ unsigned long envgen::mstosamps(float ms){
     return unsigned long(Samplerate() * 0.001f * ms);
 }
 
+inline double envgen::fastPow(double a, double b) {
+  union {
+    double d;
+    int x[2];
+  } u = { a };
+  u.x[1] = (int)(b * (u.x[1] - 1072632447) + 1072632447);
+  u.x[0] = 0;
+  return u.d;
+}

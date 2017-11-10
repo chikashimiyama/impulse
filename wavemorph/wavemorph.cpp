@@ -49,7 +49,7 @@ private:
     unsigned long mstosamps(float ms);
     float random(float max);
     float clamp(float in);
-
+    double fastSqrt(double);
     FLEXT_CALLBACK_FF(m_start);
     FLEXT_CALLBACK_FF(m_start_rand);
     FLEXT_CALLBACK_FF(m_end);
@@ -125,10 +125,10 @@ inline void wavemorph::m_signal(int n, float *const *in, float *const *out){
         currentPoint.mY = mMovement.mY * phase + mStartFixed.mY;
         float fromRight = 1.0f - currentPoint.mX;
         float fromBottom =  1.0f - currentPoint.mY;
-        distances[0] = sqrt(currentPoint.mX * currentPoint.mX +  currentPoint.mY * currentPoint.mY);
-        distances[1] = sqrt(fromRight * fromRight + currentPoint.mY * currentPoint.mY);
-        distances[2] = sqrt(fromRight * fromRight +  fromBottom * fromBottom);
-        distances[3] = sqrt(currentPoint.mX * currentPoint.mX + fromBottom * fromBottom);
+        distances[0] = fastSqrt(currentPoint.mX * currentPoint.mX +  currentPoint.mY * currentPoint.mY);
+        distances[1] = fastSqrt(fromRight * fromRight + currentPoint.mY * currentPoint.mY);
+        distances[2] = fastSqrt(fromRight * fromRight +  fromBottom * fromBottom);
+        distances[3] = fastSqrt(currentPoint.mX * currentPoint.mX + fromBottom * fromBottom);
 
         for(int j = 0; j < 4; j++){
             float amp = 1.0 - distances[j];
@@ -147,4 +147,14 @@ inline float wavemorph::random(float max){
 
 inline float wavemorph::clamp(float max){
     return std::min(1.0f, std::max(max, 0.0f));
+}
+
+inline double wavemorph::fastSqrt(double a) {
+  union {
+    double d;
+    int x[2];
+  } u = { a };
+  u.x[1] = (int)(0.5 * (u.x[1] - 1072632447) + 1072632447);
+  u.x[0] = 0;
+  return u.d;
 }

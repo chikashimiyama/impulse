@@ -1,7 +1,6 @@
 
 #include <flext.h>
 #include <random>
-#include <cmath>
 #include <chrono>
 
 #if !defined(FLEXT_VERSION) || (FLEXT_VERSION < 400)
@@ -16,6 +15,7 @@ public:
 	glisson();
 
 protected:
+
     virtual void m_signal(int n, float *const *in, float *const *out);
 
     void m_start_low(float);
@@ -26,7 +26,7 @@ protected:
     void m_curve_rand(float);
 
 private:
-
+    double fastPow(double a, double b);
     float random(float min, float max);
     void trigger();
 
@@ -72,7 +72,6 @@ mPreviousSample(1.0){
     std::random_device rd;
     mMt.seed(rd());
 
- 
 } 
 
 void glisson::m_start_low(float value){ mStartLow = value;}
@@ -93,7 +92,7 @@ void glisson::m_signal(int n, float *const *in, float *const *out){
     		trigger();
     	}
 
-    	*outs++ = pow(currentSample, mCurveFix) * mDistance + mStart;
+    	*outs++ = fastPow(currentSample, mCurveFix) * mDistance + mStart;
     	mPreviousSample = currentSample;
     }
 } 
@@ -101,11 +100,21 @@ void glisson::m_signal(int n, float *const *in, float *const *out){
 void glisson::trigger(){
 	mStart = random(mStartLow, mStartHigh);
 	mDistance = random(mEndLow, mEndHigh) - mStart;
-    mCurveFix = exp( random(mCurve, mCurve+mCurveRandom));
+    mCurveFix = exp(mCurve+random(-mCurveRandom, mCurveRandom));
 
 }
 
 float glisson::random(float min, float max){
     std::uniform_real_distribution<float> unif(min, max);
     return unif(mMt);
+}
+
+inline double glisson::fastPow(double a, double b) {
+    union {
+        double d;
+        int x[2];
+    } u = { a };
+    u.x[1] = (int)(b * (u.x[1] - 1072632447) + 1072632447);
+    u.x[0] = 0;
+    return u.d;
 }
