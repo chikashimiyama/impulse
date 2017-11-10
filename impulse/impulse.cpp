@@ -14,31 +14,15 @@ public:
 	impulse(float numOutlets);
 
 protected:
-    void m_base_amp(float amp);
-    void m_rand_amp(float amp);
-
     virtual void m_signal(int n, float *const *in, float *const *out);
-    float mNumOutlets;
 
 private:
     float random(float max);
-    float mstosamps(float ms);
-    float mBaseInterval;
-    float mRandInterval;
-    float mBaseAmp;
-    float mRandAmp;
-    float mCoef;
+    int mstosamps(float ms);
 
-    std::default_random_engine re;
-
+    float mNumOutlets;
     unsigned int mOutletCounter;
-    long mSampleCounter;
-
-    FLEXT_CALLBACK(m_bang);
-    FLEXT_CALLBACK_F(m_base_interval);
-    FLEXT_CALLBACK_F(m_rand_interval);
-    FLEXT_CALLBACK_F(m_base_amp);
-    FLEXT_CALLBACK_F(m_rand_amp);
+    int mSampleCounter;
 
 };
 
@@ -47,7 +31,7 @@ FLEXT_NEW_DSP_1("impulse~",impulse, float)
 impulse::impulse(float numOutlets):
 mNumOutlets(numOutlets),
 mOutletCounter(0),
-mSampleCounter(0){
+mSampleCounter(1){
 
     if(mNumOutlets < 1){
         mNumOutlets = 1;
@@ -55,48 +39,32 @@ mSampleCounter(0){
         mNumOutlets = 32;
     }
 
-    AddInSignal("base interval");
-    AddInSignal("random interval");
-    AddInFloat("base amp");
-    AddInFloat("random amp");
-
-    FLEXT_ADDMETHOD(2, m_base_amp); 
-    FLEXT_ADDMETHOD(3, m_rand_amp);
-
+    AddInSignal("interval in");
+    AddInSignal("amp in");
     for(int i = 0 ; i < mNumOutlets; i++){
-         AddOutSignal("impulse");
+         AddOutSignal("impulse out");
     }
 } 
 
-
-void impulse::m_base_amp(float amp){
-    mBaseAmp = amp;
-}
-
-void impulse::m_rand_amp(float amp){
-    mRandAmp = amp;
-}
-
 void impulse::m_signal(int n, float *const *in, float *const *out){
-
-    float *baseInterval = in[0];
-    float *randInterval = in[1];
+    float *interval = in[0];
+    float *amp = in[1];
 
     for (int i = 0; i < n; i++){
+        float inValue = *interval++;
+        float ampValue = *amp++;
 
         if(mSampleCounter <= 0){
-            float value = mBaseAmp + random(mRandAmp);
             for(int j = 0; j < mNumOutlets; j++){
-                out[j][i] = (mOutletCounter == j) ? value : 0.0f;
+                out[j][i] = (mOutletCounter == j) ? ampValue : 0.0f;
             }          
 
             mOutletCounter++;
             if(mOutletCounter >= mNumOutlets){ 
                 mOutletCounter = 0;
             }
-
-            mSampleCounter = (long)(mBaseInterval[i] + random(mRandInterval[i]));
-
+            mSampleCounter = mstosamps(inValue);
+            if(mSampleCounter <= 0) mSampleCounter = 1;
         }else{
             for(int j = 0; j < mNumOutlets; j++){
                 out[j][i] = 0;
@@ -104,13 +72,9 @@ void impulse::m_signal(int n, float *const *in, float *const *out){
         }
         mSampleCounter--;
     }
-} 
-
-float impulse::random(float max){
-   std::uniform_real_distribution<float> unif(0, max);
-   return unif(re);
 }
 
-float impulse::mstosamps(float ms){
-    return Samplerate() * 0.001f * ms;
+int impulse::mstosamps(float ms){
+    return static_cast<int>(Samplerate() * 0.001f * ms);
 }
+
