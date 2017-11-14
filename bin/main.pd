@@ -1,0 +1,18 @@
+#N canvas 549 345 450 300 10;
+#X obj 286 149 osc~ 880;
+#X obj 282 228 dac~;
+#X obj 286 188 *~ 0.5;
+#X obj 103 132 test;
+#X obj 104 157 test;
+#X obj 106 176 test;
+#X obj 107 201 test;
+#X obj 146 134 test;
+#X obj 147 159 test;
+#X obj 149 178 test;
+#X obj 150 203 test;
+#X obj 103 85 clone;
+#X obj 54 265 pd~ -ninsig 0 -noutsig 2 -fifo 20;
+#X msg 43 230 pd~ start workgroup.pd;
+#X connect 0 0 2 0;
+#X connect 2 0 1 0;
+#X connect 13 0 12 0;

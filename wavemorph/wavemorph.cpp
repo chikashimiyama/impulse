@@ -38,6 +38,8 @@ public:
     void m_start_rand(float x, float y);
     void m_end(float x, float y);
     void m_end_rand(float x, float y);
+    void m_curve(float);
+    void m_curve_rand(float);
 
 protected:
     virtual void m_signal(int n, float *const *in, float *const *out);
@@ -50,10 +52,14 @@ private:
     float random(float max);
     float clamp(float in);
     double fastSqrt(double);
+    double fastPow(double , double);
+
     FLEXT_CALLBACK_FF(m_start);
     FLEXT_CALLBACK_FF(m_start_rand);
     FLEXT_CALLBACK_FF(m_end);
     FLEXT_CALLBACK_FF(m_end_rand);
+    FLEXT_CALLBACK_F(m_curve);
+    FLEXT_CALLBACK_F(m_curve_rand);
 
     Point mStart;
     Point mEnd;
@@ -64,6 +70,10 @@ private:
     Point mMovement;
     Point mCurrentPoint;
     float mPreviousSample;
+
+    float mCurve;
+    float mCurveRandom;
+    float mCurveFixed;
 
 };
 
@@ -79,18 +89,23 @@ mGen(rd()){
     AddOutSignal("amp2");
     AddOutSignal("amp3");
 
-    FLEXT_ADDMETHOD_FF(0, "start",m_start);
+    FLEXT_ADDMETHOD_FF(0, "start", m_start);
     FLEXT_ADDMETHOD_FF(0, "start_rand", m_start_rand); 
     FLEXT_ADDMETHOD_FF(0, "end", m_end); 
     FLEXT_ADDMETHOD_FF(0, "end_rand", m_end_rand); 
+    FLEXT_ADDMETHOD_F(0, "curve", m_curve); 
+    FLEXT_ADDMETHOD_F(0, "curve_rand", m_curve_rand); 
+
 } 
 
 inline void wavemorph::m_start(float x, float y){ 
     mStart.set(x,y);
 }
+
 inline void wavemorph::m_end(float x, float y){ 
     mEnd.set(x,y);
 }
+
 inline void wavemorph::m_start_rand(float x, float y){
     mStartRandom.set(x,y);
 }
@@ -99,17 +114,25 @@ inline void wavemorph::m_end_rand(float x, float y){
     mEndRandom.set(x,y);
 }
 
+inline void wavemorph::m_curve(float value){ 
+    mCurve = value;
+}
+
+inline void wavemorph::m_curve_rand(float value){ 
+    mCurveRandom = value;
+}
+
 inline void wavemorph::trigger(){
     Point endFixed;
     mStartFixed.set(mStart.mX + random(mStartRandom.mX), mStart.mY + random(mStartRandom.mY));
     endFixed.set(mEnd.mX + random(mEndRandom.mX), mEnd.mY + random(mEndRandom.mY));
     mMovement.set(endFixed.mX - mStart.mX, endFixed.mY - mStart.mY);
     mCurrentPoint = mStartFixed;
+    mCurveFixed = exp(mCurve + random(mCurveRandom));
 }
 
 inline void wavemorph::m_signal(int n, float *const *in, float *const *out){
     float *ins= in[0];
-
 
     Point currentPoint;
     float distances[4];
@@ -120,9 +143,9 @@ inline void wavemorph::m_signal(int n, float *const *in, float *const *out){
         if(phase < mPreviousSample){
             trigger();
         }
-    
-        currentPoint.mX = mMovement.mX * phase + mStartFixed.mX;
-        currentPoint.mY = mMovement.mY * phase + mStartFixed.mY;
+        float distorted = fastPow(phase, mCurveFixed);
+        currentPoint.mX = mMovement.mX * distorted + mStartFixed.mX;
+        currentPoint.mY = mMovement.mY * distorted + mStartFixed.mY;
         float fromRight = 1.0f - currentPoint.mX;
         float fromBottom =  1.0f - currentPoint.mY;
         distances[0] = fastSqrt(currentPoint.mX * currentPoint.mX +  currentPoint.mY * currentPoint.mY);
@@ -140,7 +163,6 @@ inline void wavemorph::m_signal(int n, float *const *in, float *const *out){
 } 
 
 inline float wavemorph::random(float max){
-
     std::uniform_real_distribution<float> unif(-max, max);
     return unif(mGen);
 }
@@ -150,11 +172,16 @@ inline float wavemorph::clamp(float max){
 }
 
 inline double wavemorph::fastSqrt(double a) {
-  union {
-    double d;
-    int x[2];
-  } u = { a };
-  u.x[1] = (int)(0.5 * (u.x[1] - 1072632447) + 1072632447);
-  u.x[0] = 0;
-  return u.d;
+    return fastPow(a, 0.5);
+}
+
+inline double wavemorph::fastPow(double a, double b) {
+    union {
+        double d;
+        int x[2];
+    } u = { a };
+
+    u.x[1] = (int)(b * (u.x[1] - 1072632447) + 1072632447);
+    u.x[0] = 0;
+    return u.d;
 }

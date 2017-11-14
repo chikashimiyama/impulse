@@ -12,17 +12,22 @@ class impulse: public flext_dsp{
  
 public:
 	impulse(float numOutlets);
-
+    void m_dropoff(float ratio);
 protected:
     virtual void m_signal(int n, float *const *in, float *const *out);
 
 private:
-    float random(float max);
     int mstosamps(float ms);
+    bool dropoff();
 
     float mNumOutlets;
     unsigned int mOutletCounter;
     int mSampleCounter;
+    int mDropOffRatio;
+    std::default_random_engine re;
+
+    FLEXT_CALLBACK_F(m_dropoff);
+
 
 };
 
@@ -44,7 +49,13 @@ mSampleCounter(1){
     for(int i = 0 ; i < mNumOutlets; i++){
          AddOutSignal("impulse out");
     }
+    FLEXT_ADDMETHOD_F(0,"dropoff", m_dropoff);
+
 } 
+
+void impulse::m_dropoff(float ratio){
+    mDropOffRatio = (int)ratio;
+}
 
 void impulse::m_signal(int n, float *const *in, float *const *out){
     float *interval = in[0];
@@ -55,16 +66,20 @@ void impulse::m_signal(int n, float *const *in, float *const *out){
         float ampValue = *amp++;
 
         if(mSampleCounter <= 0){
+            bool valid = dropoff();;
             for(int j = 0; j < mNumOutlets; j++){
+                ampValue *= valid;
                 out[j][i] = (mOutletCounter == j) ? ampValue : 0.0f;
             }          
 
-            mOutletCounter++;
+            if(valid){ mOutletCounter++;}
             if(mOutletCounter >= mNumOutlets){ 
                 mOutletCounter = 0;
             }
+
             mSampleCounter = mstosamps(inValue);
             if(mSampleCounter <= 0) mSampleCounter = 1;
+
         }else{
             for(int j = 0; j < mNumOutlets; j++){
                 out[j][i] = 0;
@@ -76,5 +91,10 @@ void impulse::m_signal(int n, float *const *in, float *const *out){
 
 int impulse::mstosamps(float ms){
     return static_cast<int>(Samplerate() * 0.001f * ms);
+}
+
+bool impulse::dropoff(){
+    std::uniform_int_distribution<> unii(0, 99);
+    return mDropOffRatio <= unii(re);
 }
 

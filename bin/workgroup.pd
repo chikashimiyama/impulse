@@ -1,0 +1,17 @@
+#N canvas 0 50 450 300 10;
+#X obj 128 71 test;
+#X obj 129 93 test;
+#X obj 166 71 test;
+#X obj 167 93 test;
+#X obj 128 118 test;
+#X obj 129 140 test;
+#X obj 166 118 test;
+#X obj 167 140 test;
+#X obj 210 64 test;
+#X obj 211 86 test;
+#X obj 248 64 test;
+#X obj 249 86 test;
+#X obj 210 111 test;
+#X obj 211 133 test;
+#X obj 248 111 test;
+#X obj 249 133 test;
